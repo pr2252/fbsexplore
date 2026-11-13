@@ -358,7 +358,7 @@
       <div id="map"></div>
     </div>
 
-    <!-- Right Explorer Detail Panel -->
+    <!-- Right Explorer Panel -->
     <div id="explorer-panel">
       <div class="panel-header">
         <span>Venue & Team Explorer</span>
@@ -624,7 +624,6 @@
       document.querySelectorAll('.school-list').forEach(el => el.style.display = 'none');
       document.querySelectorAll('.conf-toggle-arrow').forEach(el => el.textContent = '▼');
       
-      // Explicitly zoom out to default national view when any top filter button is clicked
       map.setView([39.8283, -98.5795], 4);
     }
 
