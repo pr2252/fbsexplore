@@ -59,9 +59,9 @@
 
     @media (max-width: 1100px) {
       #dashboard-wrapper { flex-direction: column; }
-      #sidebar { width: 100%; height: 40vh; order: 2; }
+      #sidebar { width: 100%; height: 45vh; order: 2; }
       #map-container { height: 35vh; order: 1; }
-      #explorer-panel { width: 100%; height: 25vh; order: 3; }
+      #explorer-panel { width: 100%; height: 20vh; order: 3; }
     }
 
     .sidebar-header {
@@ -139,7 +139,7 @@
       padding: 10px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
     }
 
     .section-heading {
@@ -151,19 +151,20 @@
       margin: 6px 0 2px 4px;
       border-bottom: 1px solid #e2e8f0;
       padding-bottom: 2px;
+      flex-shrink: 0;
     }
 
     /* Conference Accordion Card */
     .conf-group {
       border: 1px solid #e2e8f0;
       border-radius: 8px;
-      overflow: hidden;
       background: #fff;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
+      flex-shrink: 0;
     }
 
     .conf-summary {
-      padding: 8px 12px;
+      padding: 10px 12px;
       font-weight: 700;
       font-size: 12px;
       color: #0f172a;
@@ -173,6 +174,7 @@
       align-items: center;
       cursor: pointer;
       user-select: none;
+      border-radius: 8px;
     }
     .conf-summary:hover { background: #f1f5f9; }
 
@@ -197,29 +199,25 @@
     }
 
     .school-list {
-      padding: 4px 12px 8px 22px;
+      padding: 6px 12px 10px 24px;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 8px;
       border-top: 1px solid #f1f5f9;
       background: #ffffff;
+      max-height: 280px;
+      overflow-y: auto;
     }
 
     .school-item {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
       color: #334155;
       cursor: pointer;
       user-select: none;
-    }
-    .school-item input[type="checkbox"] {
-      cursor: pointer;
-      accent-color: #0284c7;
-      width: 13px;
-      height: 13px;
+      padding: 2px 0;
     }
     .school-name:hover { color: #0284c7; text-decoration: underline; }
     .school-item.selected-active .school-name { color: #0284c7; font-weight: 800; }
@@ -400,6 +398,7 @@
 
     let venues = [];
     let markersMap = {}; 
+    let activeConference = null; // Track currently highlighted conference filter
 
     function updateBasemapForZoom() {
       const currentZoom = map.getZoom();
@@ -514,32 +513,33 @@
           listDiv.style.display = 'none';
 
           summaryDiv.addEventListener('click', () => {
+            const isHidden = listDiv.style.display === 'none';
+
+            // Contract all other lists and reset arrows
             document.querySelectorAll('.school-list').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.conf-toggle-arrow').forEach(el => el.textContent = '▼');
 
-            listDiv.style.display = 'flex';
-            summaryDiv.querySelector('.conf-toggle-arrow').textContent = '▲';
+            if (isHidden) {
+              listDiv.style.display = 'flex';
+              summaryDiv.querySelector('.conf-toggle-arrow').textContent = '▲';
+              activeConference = conf;
+            } else {
+              activeConference = null;
+            }
 
-            document.querySelectorAll('.school-checkbox').forEach(cb => {
-              const schoolObj = venues.find(s => s.college === cb.value);
-              cb.checked = (schoolObj && schoolObj.conference === conf);
-            });
             updateMapFilters();
             updateTopButtonStates();
             map.setView([39.8283, -98.5795], 4);
           });
 
           schools.forEach(v => {
-            const itemLabel = document.createElement('label');
-            itemLabel.className = 'school-item';
-            itemLabel.id = `school-item-${v.college.replace(/\s+/g, '_')}`;
-            itemLabel.innerHTML = `
-              <input type="checkbox" class="school-checkbox" value="${v.college}" checked>
-              <span class="school-name">${v.college}</span>
-            `;
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'school-item';
+            itemDiv.id = `school-item-${v.college.replace(/\s+/g, '_')}`;
+            itemDiv.innerHTML = `<span class="school-name">${v.college}</span>`;
 
-            itemLabel.querySelector('.school-name').addEventListener('click', (e) => {
-              e.preventDefault();
+            itemDiv.addEventListener('click', (e) => {
+              e.stopPropagation();
               map.flyTo(v.coords, 15, { duration: 0.8 });
               if (markersMap[v.college]) {
                 markersMap[v.college].openPopup();
@@ -547,11 +547,7 @@
               showVenueDetails(v);
             });
 
-            itemLabel.querySelector('.school-checkbox').addEventListener('change', () => {
-              updateMapFilters();
-              updateTopButtonStates();
-            });
-            listDiv.appendChild(itemLabel);
+            listDiv.appendChild(itemDiv);
           });
 
           groupDiv.appendChild(summaryDiv);
@@ -570,7 +566,7 @@
         renderGroupList("Other / Independents", otherConfs);
       }
 
-      updateActiveCount();
+      updateMapFilters();
     }
 
     function updateMapFilters() {
@@ -578,10 +574,25 @@
       markersMap = {};
       let visibleCount = 0;
 
-      document.querySelectorAll('.school-checkbox').forEach(cb => {
-        const collegeName = cb.value;
-        const v = venues.find(item => item.college === collegeName);
-        if (v && cb.checked) {
+      venues.forEach(v => {
+        let show = false;
+        if (activeConference) {
+          show = (v.conference === activeConference);
+        } else {
+          // Check top filter buttons state
+          const btnAll = document.getElementById('btn-select-all');
+          const btnP4 = document.getElementById('btn-power-4');
+          const btnG6 = document.getElementById('btn-group-6');
+          const btnNone = document.getElementById('btn-select-none');
+
+          if (btnAll.classList.contains('active')) show = true;
+          else if (btnP4.classList.contains('active')) show = POWER_4.has(v.conference);
+          else if (btnG6.classList.contains('active')) show = GROUP_OF_6.has(v.conference);
+          else if (btnNone.classList.contains('active')) show = false;
+          else show = true; // default fallback
+        }
+
+        if (show) {
           visibleCount++;
           const color = CONFERENCE_COLORS[v.conference] || "#475569";
           const marker = L.circleMarker(v.coords, {
@@ -602,40 +613,14 @@
       updateBasemapForZoom();
     }
 
-    function updateTopButtonStates() {
-      const allCheckboxes = Array.from(document.querySelectorAll('.school-checkbox'));
-      const checkedValues = new Set(allCheckboxes.filter(cb => cb.checked).map(cb => cb.value));
-
-      const btnAll = document.getElementById('btn-select-all');
-      const btnP4 = document.getElementById('btn-power-4');
-      const btnG6 = document.getElementById('btn-group-6');
-      const btnNone = document.getElementById('btn-select-none');
-
-      btnAll.classList.remove('active');
-      btnP4.classList.remove('active');
-      btnG6.classList.remove('active');
-      btnNone.classList.remove('active');
-
-      if (checkedValues.size === 0) {
-        btnNone.classList.add('active');
-      } else if (checkedValues.size === allCheckboxes.length) {
-        btnAll.classList.add('active');
-      } else {
-        const p4Colleges = venues.filter(v => POWER_4.has(v.conference)).map(v => v.college);
-        const g6Colleges = venues.filter(v => GROUP_OF_6.has(v.conference)).map(v => v.college);
-
-        if (p4Colleges.length > 0 && p4Colleges.every(c => checkedValues.has(c)) && checkedValues.size === p4Colleges.length) {
-          btnP4.classList.add('active');
-        } else if (g6Colleges.length > 0 && g6Colleges.every(c => checkedValues.has(c)) && checkedValues.size === g6Colleges.length) {
-          btnG6.classList.add('active');
-        }
-      }
-      updateActiveCount();
-    }
-
-    function updateActiveCount() {
-      const checked = document.querySelectorAll('.school-checkbox:checked').length;
-      document.getElementById('active-count').textContent = `${checked} of ${venues.length} shown`;
+    function setActiveFilterButton(btnId) {
+      ['btn-select-all', 'btn-power-4', 'btn-group-6', 'btn-select-none'].forEach(id => {
+        document.getElementById(id).classList.remove('active');
+      });
+      document.getElementById(btnId).classList.add('active');
+      activeConference = null; // Clear individual conference isolation when top filter is clicked
+      document.querySelectorAll('.school-list').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.conf-toggle-arrow').forEach(el => el.textContent = '▼');
     }
 
     window.handleGvizResponse = function(response) {
@@ -684,35 +669,24 @@
       });
 
       renderSidebarTree(grouped);
-      updateMapFilters();
     };
 
     // Top Filter Buttons
     document.getElementById('btn-select-all').addEventListener('click', () => {
-      document.querySelectorAll('.school-checkbox').forEach(cb => cb.checked = true);
+      setActiveFilterButton('btn-select-all');
       updateMapFilters();
-      updateTopButtonStates();
     });
     document.getElementById('btn-power-4').addEventListener('click', () => {
-      document.querySelectorAll('.school-checkbox').forEach(cb => {
-        const schoolObj = venues.find(s => s.college === cb.value);
-        cb.checked = (schoolObj && POWER_4.has(schoolObj.conference));
-      });
+      setActiveFilterButton('btn-power-4');
       updateMapFilters();
-      updateTopButtonStates();
     });
     document.getElementById('btn-group-6').addEventListener('click', () => {
-      document.querySelectorAll('.school-checkbox').forEach(cb => {
-        const schoolObj = venues.find(s => s.college === cb.value);
-        cb.checked = (schoolObj && GROUP_OF_6.has(schoolObj.conference));
-      });
+      setActiveFilterButton('btn-group-6');
       updateMapFilters();
-      updateTopButtonStates();
     });
     document.getElementById('btn-select-none').addEventListener('click', () => {
-      document.querySelectorAll('.school-checkbox').forEach(cb => cb.checked = false);
+      setActiveFilterButton('btn-select-none');
       updateMapFilters();
-      updateTopButtonStates();
     });
     document.getElementById('btn-reset-view').addEventListener('click', () => {
       map.setView([39.8283, -98.5795], 4);
