@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FBS Team & Venue Explorer Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    html, body { 
+      margin: 0; padding: 0; width: 100%; height: 100%; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      background: #0f172a;
+    }
+
+    /* Split Screen Dashboard Layout */
+    #dashboard-wrapper {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+    }
+
+    #map-container {
+      flex: 1;
+      height: 100%;
+      position: relative;
+    }
+
+    #map { width: 100%; height: 100%; }
+
+    /* Right Sidebar / Explorer Panel */
+    #explorer-panel {
+      width: 420px;
+      background: #ffffff;
+      height: 100%;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.25);
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+
+    @media (max-width: 900px) {
+      #dashboard-wrapper { flex-direction: column-reverse; }
+      #explorer-panel { width: 100%; height: 45vh; }
+      #map-container { height: 55vh; }
+    }
+
+    .panel-header {
+      background: #0f172a;
+      color: #fff;
+      padding: 16px 20px;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-body {
+      padding: 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Venue Photo Box */
+    .venue-photo-container {
+      width: 100%;
+      height: 220px;
+      background: #f1f5f9;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .venue-photo-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-placeholder {
+      color: #94a3b8;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .team-title { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
+    .team-subtitle { font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .info-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .info-label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+    .info-value { font-size: 14px; font-weight: 700; color: #0f172a; margin-top: 2px; }
+
+    .notes-box {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12px;
+      color: #92400e;
+      line-height: 1.4;
+    }
+
+    .wiki-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: #0284c7;
+      color: #ffffff;
+      text-decoration: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      transition: background 0.15s ease;
+      margin-top: auto;
+    }
+    .wiki-btn:hover { background: #0369a1; }
+  </style>
+</head>
+<body>
+
+  <div id="dashboard-wrapper">
+    <!-- Left Map Pane -->
+    <div id="map-container">
+      <div id="map"></div>
+    </div>
+
+    <!-- Right Explorer Panel Pane -->
+    <div id="explorer-panel">
+      <div class="panel-header">
+        <span>FBS Team & Venue Explorer</span>
+        <span id="selected-count" style="font-size: 11px; font-weight: 600; opacity: 0.8;">Select a stadium</span>
+      </div>
+      <div class="panel-body" id="panel-content">
+        <div class="venue-photo-container">
+          <div class="photo-placeholder">Click any stadium marker on the map to explore team details, venue capacity, and Wikipedia photos.</div>
+        </div>
+        <div>
+          <h2 class="team-title">Welcome Explorer</h2>
+          <div class="team-subtitle">Interactive Dashboard</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SPREADSHEET_ID = "1XHaT57dHhRLtMojDEXhMn8AMScxz5F7WBe1i8y6NIe4";
+    const SHEET_NAME = "NCAA FBS";
+
+    const CONFERENCE_COLORS = {
+      "ACC": "#005596", "Big Ten": "#00274c", "Big 12": "#c41230",
+      "SEC": "#e0a100", "AAC": "#002b49", "CUSA": "#d1261d",
+      "MAC": "#00529b", "Mountain West": "#582c83", "Pac-12": "#004b87",
+      "Sun Belt": "#e06d00", "Independent": "#64748b"
+    };
+
+    const osmStandard = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, noWrap: true
+    });
+    const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 18, noWrap: true
+    });
+
+    const map = L.map('map', { zoomControl: true, minZoom: 3, layers: [osmStandard] }).setView([39.8283, -98.5795], 4);
+    let activeBasemapLayer = osmStandard;
+    const venueLayer = L.layerGroup().addTo(map);
+    let venues = [];
+
+    function updateBasemapForZoom() {
+      const currentZoom = map.getZoom();
+      let targetLayer = currentZoom <= 6 ? osmStandard : esriSatellite;
+      if (activeBasemapLayer !== targetLayer) {
+        if (map.hasLayer(activeBasemapLayer)) map.removeLayer(activeBasemapLayer);
+        map.addLayer(targetLayer);
+        activeBasemapLayer = targetLayer;
+      }
+    }
+
+    // Function to fetch Wikipedia thumbnail dynamically
+    async function fetchWikiImage(wikiUrl, venueName, collegeName) {
+      let pageTitle = "";
+      if (wikiUrl && wikiUrl.includes('/wiki/')) {
+        pageTitle = wikiUrl.split('/wiki/')[1];
+      } else {
+        pageTitle = encodeURIComponent(venueName);
+      }
+
+      const apiUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&format=json&pithumbsize=500&titles=${pageTitle}&origin=*`;
+      try {
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+        const pages = data.query.pages;
+        for (let id in pages) {
+          if (pages[id].thumbnail && pages[id].thumbnail.source) {
+            return pages[id].thumbnail.source;
+          }
+        }
+      } catch (e) {
+        console.log("Could not fetch wiki image");
+      }
+      return null;
+    }
+
+    async function displayVenueDetails(v) {
+      const color = CONFERENCE_COLORS[v.conference] || "#475569";
+      const capacityStr = v.capacity ? Number(v.capacity).toLocaleString() : 'N/A';
+      const wikiUrl = v.wikiUrl && v.wikiUrl.startsWith('http') ? v.wikiUrl : `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(v.venue + ' ' + v.college)}`;
+
+      document.getElementById('selected-count').textContent = v.conference;
+      const panelContent = document.getElementById('panel-content');
+      
+      panelContent.innerHTML = `
+        <div class="venue-photo-container" id="photo-box">
+          <div class="photo-placeholder">Loading venue photo from Wikipedia...</div>
+        </div>
+        <div>
+          <h2 class="team-title">${v.college} ${v.mascot}</h2>
+          <div class="team-subtitle"><span style="color:${color}; font-weight:800;">${v.conference}</span> &bull; ${v.venueCity}</div>
+        </div>
+        <div class="info-grid">
+          <div class="info-card">
+            <div class="info-label">Venue Name</div>
+            <div class="info-value" style="font-size: 12px; margin-top:4px;">${v.venue}</div>
+          </div>
+          <div class="info-card">
+            <div class="info-label">Capacity</div>
+            <div class="info-value">${capacityStr}</div>
+          </div>
+        </div>
+        ${v.notes ? `<div class="notes-box"><b>Notes:</b> ${v.notes}</div>` : ''}
+        <a href="${wikiUrl}" target="_blank" rel="noopener noreferrer" class="wiki-link wiki-btn">View on Wikipedia &rarr;</a>
+      `;
+
+      // Fetch and insert photo
+      const imgUrl = await fetchWikiImage(v.wikiUrl, v.venue, v.college);
+      const photoBox = document.getElementById('photo-box');
+      if (imgUrl) {
+        photoBox.innerHTML = `<img src="${imgUrl}" alt="${v.venue}">`;
+      } else {
+        photoBox.innerHTML = `<div class="photo-placeholder">No Wikipedia photo available for ${v.venue}</div>`;
+      }
+    }
+
+    window.handleGvizResponse = function(response) {
+      if (!response || !response.table) return;
+      const cols = response.table.cols.map((c, idx) => (c && c.label) ? c.label.trim() : String.fromCharCode(65 + idx));
+      const rawRows = response.table.rows.map(r => {
+        let rowObj = {};
+        if (r && r.c) {
+          r.c.forEach((cell, idx) => {
+            rowObj[cols[idx] || String.fromCharCode(65 + idx)] = (cell && cell.v !== null) ? cell.v : '';
+          });
+        }
+        return rowObj;
+      });
+
+      function getRowVal(row, possibleKeys) {
+        for (let key of possibleKeys) {
+          for (let rk in row) {
+            if (rk.trim().toLowerCase() === key.toLowerCase()) return row[rk];
+          }
+        }
+        return '';
+      }
+
+      venues = [];
+      rawRows.forEach(row => {
+        const conf = String(getRowVal(row, ['FBS Conference', 'Conference']) || '').trim();
+        const college = String(getRowVal(row, ['College/University Name', 'College', 'Team Name']) || '').trim();
+        const mascot = String(getRowVal(row, ['Mascot']) || '').trim();
+        const venueName = String(getRowVal(row, ['Venue Name', 'Venue']) || '').trim();
+        const venueCity = String(getRowVal(row, ['Venue City', 'City']) || '').trim();
+        const capacity = getRowVal(row, ['Venue Capacity for Football', 'Capacity']);
+        const notes = String(getRowVal(row, ['Notes (as needed)', 'Notes']) || '').trim();
+        const lat = parseFloat(getRowVal(row, ['Latitude', 'Lat']));
+        const lng = parseFloat(getRowVal(row, ['Longitude', 'Lng']));
+        const wikiUrl = String(getRowVal(row, ['Venue Wiki', 'Wiki', 'Wikipedia']) || '').trim();
+
+        if (!venueName || isNaN(lat) || isNaN(lng) || !college) return;
+        venues.push({ conference: conf, college, mascot, venue: venueName, venueCity, capacity, notes, coords: [lat, lng], wikiUrl });
+      });
+
+      // Plot markers
+      venues.forEach(v => {
+        const color = CONFERENCE_COLORS[v.conference] || "#475569";
+        const marker = L.circleMarker(v.coords, {
+          radius: 6.5, fillColor: color, color: "#ffffff", weight: 1.5, opacity: 1, fillOpacity: 0.95
+        }).addTo(venueLayer);
+
+        marker.on('click', () => {
+          map.flyTo(v.coords, 15, { duration: 0.8 });
+          displayVenueDetails(v);
+        });
+
+        marker.bindTooltip(`<b>${v.college}</b>`, { direction: 'top', className: 'venue-tooltip', offset: [0, -8] });
+      });
+    };
+
+    const gvizUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?sheet=${encodeURIComponent(SHEET_NAME)}&tqx=responseHandler:handleGvizResponse`;
+    const script = document.createElement('script');
+    script.src = gvizUrl;
+    document.body.appendChild(script);
+
+    map.on('zoomend', updateBasemapForZoom);
+  </script>
+</body>
+</html>
