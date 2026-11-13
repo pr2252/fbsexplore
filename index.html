@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>FBS Conference & School Explorer</title>
+  <title>FBS Conference & School Explorer Dashboard</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
@@ -21,6 +21,20 @@
       height: 100dvh;
     }
 
+    /* Left Sidebar Tree */
+    #sidebar {
+      width: 340px;
+      background: #ffffff;
+      height: 100%;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.25);
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+      box-sizing: border-box;
+      flex-shrink: 0;
+    }
+
+    /* Center Map Container */
     #map-container {
       flex: 1;
       height: 100%;
@@ -29,29 +43,32 @@
 
     #map { width: 100%; height: 100%; }
 
-    /* Left Sidebar Explorer */
-    #sidebar {
-      width: 360px;
+    /* Right Info & Photo Explorer Panel */
+    #explorer-panel {
+      width: 380px;
       background: #ffffff;
       height: 100%;
-      box-shadow: 4px 0 20px rgba(0,0,0,0.25);
+      box-shadow: -4px 0 20px rgba(0,0,0,0.25);
       display: flex;
       flex-direction: column;
       z-index: 1000;
       box-sizing: border-box;
+      overflow-y: auto;
+      flex-shrink: 0;
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 1100px) {
       #dashboard-wrapper { flex-direction: column; }
-      #sidebar { width: 100%; height: 45vh; order: 2; }
-      #map-container { height: 55vh; order: 1; }
+      #sidebar { width: 100%; height: 35vh; order: 2; }
+      #map-container { height: 40vh; order: 1; }
+      #explorer-panel { width: 100%; height: 25vh; order: 3; }
     }
 
     .sidebar-header {
       background: #0f172a;
       color: #fff;
-      padding: 16px 20px;
-      font-size: 15px;
+      padding: 14px 18px;
+      font-size: 14px;
       font-weight: 800;
       letter-spacing: 0.5px;
       display: flex;
@@ -61,7 +78,7 @@
     }
 
     .sidebar-actions {
-      padding: 10px 16px;
+      padding: 8px 12px;
       background: #f8fafc;
       border-bottom: 1px solid #e2e8f0;
       display: flex;
@@ -73,7 +90,7 @@
       background: #ffffff;
       border: 1.5px solid #cbd5e1;
       border-radius: 6px;
-      padding: 5px 10px;
+      padding: 4px 8px;
       font-size: 11px;
       font-weight: 700;
       cursor: pointer;
@@ -86,10 +103,10 @@
     .sidebar-content {
       flex: 1;
       overflow-y: auto;
-      padding: 12px;
+      padding: 10px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
     /* Conference Accordion Card */
@@ -101,12 +118,11 @@
     }
 
     .conf-summary {
-      padding: 10px 14px;
+      padding: 8px 12px;
       font-weight: 700;
-      font-size: 13px;
+      font-size: 12px;
       color: #0f172a;
       background: #f8fafc;
-      cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -114,19 +130,34 @@
     }
     .conf-summary:hover { background: #f1f5f9; }
 
+    .conf-info-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      flex: 1;
+    }
+
     .conf-swatch {
       width: 10px;
       height: 10px;
       border-radius: 50%;
       display: inline-block;
-      margin-right: 8px;
+      flex-shrink: 0;
+    }
+
+    .conf-toggle-arrow {
+      cursor: pointer;
+      padding: 4px;
+      color: #64748b;
+      font-size: 10px;
     }
 
     .school-list {
-      padding: 6px 14px 10px 24px;
+      padding: 4px 12px 8px 22px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
       border-top: 1px solid #f1f5f9;
       background: #ffffff;
     }
@@ -135,7 +166,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
       color: #334155;
       cursor: pointer;
@@ -144,46 +175,116 @@
     .school-item input[type="checkbox"] {
       cursor: pointer;
       accent-color: #0284c7;
-      width: 14px;
-      height: 14px;
+      width: 13px;
+      height: 13px;
     }
     .school-name:hover { color: #0284c7; text-decoration: underline; }
+    .school-item.selected-active .school-name { color: #0284c7; font-weight: 800; }
 
-    /* Top Title Header on Map */
-    #top-header {
-      position: absolute;
-      top: 12px;
-      right: 20px;
-      background: rgba(15, 23, 42, 0.92);
-      color: #ffffff;
-      padding: 8px 18px;
-      border-radius: 20px;
+    /* Right Explorer Panel Styles */
+    .panel-header {
+      background: #1e293b;
+      color: #fff;
+      padding: 14px 18px;
       font-size: 14px;
-      font-weight: 700;
-      z-index: 1000;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
-      backdrop-filter: blur(4px);
-      pointer-events: none;
+      font-weight: 800;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
     }
 
-    /* Pop-up & Tooltip Styling */
-    .popup-title { font-weight: 800; font-size: 14px; margin-bottom: 2px; color: #0f172a; }
-    .popup-subtitle { font-size: 11px; color: #64748b; margin-bottom: 6px; text-transform: uppercase; font-weight: 700; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
-    .team-item { font-size: 12px; margin: 4px 0; line-height: 1.4; color: #334155; }
-    .conf-badge { font-weight: 700; font-size: 10px; color: #fff; padding: 2px 6px; border-radius: 4px; margin-right: 6px; display: inline-block; }
-    .meta-detail { font-size: 11px; color: #475569; margin-top: 4px; line-height: 1.35; }
-    .wiki-link { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: #0284c7; text-decoration: none; font-weight: 600; margin-top: 8px; padding-top: 6px; border-top: 1px dashed #e2e8f0; width: 100%; }
-    .wiki-link:hover { color: #0369a1; text-decoration: underline; }
-    .venue-tooltip { background: rgba(255, 255, 255, 0.95); border: 1px solid #cbd5e1; border-radius: 4px; color: #0f172a; font-size: 11px; font-weight: 600; padding: 3px 7px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+    .panel-body {
+      padding: 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .venue-photo-container {
+      width: 100%;
+      height: 180px;
+      background: #f1f5f9;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .venue-photo-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-placeholder {
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      padding: 16px;
+    }
+
+    .team-title { font-size: 18px; font-weight: 800; color: #0f172a; margin: 0; }
+    .team-subtitle { font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .info-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+
+    .info-label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+    .info-value { font-size: 13px; font-weight: 700; color: #0f172a; margin-top: 2px; }
+
+    .notes-box {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 11px;
+      color: #92400e;
+      line-height: 1.4;
+    }
+
+    .wiki-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: #0284c7;
+      color: #ffffff;
+      text-decoration: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 12px;
+      transition: background 0.15s ease;
+      margin-top: auto;
+    }
+    .wiki-btn:hover { background: #0369a1; }
+
+    .venue-tooltip { background: rgba(255, 255, 255, 0.95); border: 1px solid #cbd5e1; border-radius: 4px; color: #0f172a; font-size: 11px; font-weight: 600; padding: 3px 7px; }
   </style>
 </head>
 <body>
 
   <div id="dashboard-wrapper">
-    <!-- Left Sidebar with Conferences & Schools -->
+    <!-- Left Sidebar: Conferences & Schools -->
     <div id="sidebar">
       <div class="sidebar-header">
-        <span>FBS Conference & School Explorer</span>
+        <span>Conferences & Schools</span>
         <span id="active-count" style="font-size: 11px; font-weight: 600; opacity: 0.8;">Loading...</span>
       </div>
       <div class="sidebar-actions">
@@ -191,15 +292,29 @@
         <button class="btn-action" id="btn-none">Deselect All</button>
         <button class="btn-action" id="btn-reset">Reset View</button>
       </div>
-      <div class="sidebar-content" id="sidebar-tree">
-        <!-- Populated dynamically via JS -->
-      </div>
+      <div class="sidebar-content" id="sidebar-tree"></div>
     </div>
 
-    <!-- Right Map Pane -->
+    <!-- Center Map -->
     <div id="map-container">
-      <div id="top-header">FBS Venues Explorer</div>
       <div id="map"></div>
+    </div>
+
+    <!-- Right Explorer Detail Panel -->
+    <div id="explorer-panel">
+      <div class="panel-header">
+        <span>Venue & Team Explorer</span>
+        <span id="panel-conf-tag" style="font-size: 10px; font-weight: 700; background: rgba(255,255,255,0.15); padding: 2px 6px; border-radius: 4px;">FBS</span>
+      </div>
+      <div class="panel-body" id="panel-content">
+        <div class="venue-photo-container">
+          <div class="photo-placeholder">Click any stadium marker on the map or school name in the sidebar to inspect details and Wikipedia photos.</div>
+        </div>
+        <div>
+          <h2 class="team-title">Select a School</h2>
+          <div class="team-subtitle">Interactive Dashboard</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -222,7 +337,8 @@
     const venueLayer = L.layerGroup().addTo(map);
 
     let venues = [];
-    let markersMap = {}; // collegeName -> marker object
+    let markersMap = {}; 
+    let activeSelectedCollege = null;
 
     function updateBasemapForZoom() {
       const currentZoom = map.getZoom();
@@ -231,6 +347,77 @@
         if (map.hasLayer(activeBasemapLayer)) map.removeLayer(activeBasemapLayer);
         map.addLayer(targetLayer);
         activeBasemapLayer = targetLayer;
+      }
+    }
+
+    async function fetchWikiImage(wikiUrl, venueName) {
+      let pageTitle = "";
+      if (wikiUrl && wikiUrl.includes('/wiki/')) {
+        pageTitle = wikiUrl.split('/wiki/')[1];
+      } else {
+        pageTitle = encodeURIComponent(venueName);
+      }
+      const apiUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&format=json&pithumbsize=500&titles=${pageTitle}&origin=*`;
+      try {
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+        const pages = data.query.pages;
+        for (let id in pages) {
+          if (pages[id].thumbnail && pages[id].thumbnail.source) {
+            return pages[id].thumbnail.source;
+          }
+        }
+      } catch (e) {
+        console.log("Could not fetch wiki image");
+      }
+      return null;
+    }
+
+    async function showVenueDetails(v) {
+      activeSelectedCollege = v.college;
+      const color = CONFERENCE_COLORS[v.conference] || "#475569";
+      const capacityStr = v.capacity ? Number(v.capacity).toLocaleString() : 'N/A';
+      const wikiUrl = v.wikiUrl && v.wikiUrl.startsWith('http') ? v.wikiUrl : `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(v.venue + ' ' + v.college)}`;
+
+      document.getElementById('panel-conf-tag').textContent = v.conference;
+      document.getElementById('panel-conf-tag').style.background = color;
+      
+      const panelContent = document.getElementById('panel-content');
+      panelContent.innerHTML = `
+        <div class="venue-photo-container" id="photo-box">
+          <div class="photo-placeholder">Loading Wikipedia photo...</div>
+        </div>
+        <div>
+          <h2 class="team-title">${v.college} ${v.mascot}</h2>
+          <div class="team-subtitle">${v.venueCity}</div>
+        </div>
+        <div class="info-grid">
+          <div class="info-card">
+            <div class="info-label">Venue Name</div>
+            <div class="info-value" style="font-size: 11px; margin-top:2px;">${v.venue}</div>
+          </div>
+          <div class="info-card">
+            <div class="info-label">Capacity</div>
+            <div class="info-value">${capacityStr}</div>
+          </div>
+        </div>
+        ${v.notes ? `<div class="notes-box"><b>Notes:</b> ${v.notes}</div>` : ''}
+        <a href="${wikiUrl}" target="_blank" rel="noopener noreferrer" class="wiki-btn">View on Wikipedia &rarr;</a>
+      `;
+
+      // Highlight active item in sidebar
+      document.querySelectorAll('.school-item').forEach(el => el.classList.remove('selected-active'));
+      const activeEl = document.getElementById(`school-item-${v.college.replace(/\s+/g, '_')}`);
+      if (activeEl) activeEl.classList.add('selected-active');
+
+      const imgUrl = await fetchWikiImage(v.wikiUrl, v.venue);
+      const photoBox = document.getElementById('photo-box');
+      if (photoBox) {
+        if (imgUrl) {
+          photoBox.innerHTML = `<img src="${imgUrl}" alt="${v.venue}">`;
+        } else {
+          photoBox.innerHTML = `<div class="photo-placeholder">No Wikipedia photo available</div>`;
+        }
       }
     }
 
@@ -247,37 +434,54 @@
 
         const summaryDiv = document.createElement('div');
         summaryDiv.className = 'conf-summary';
+        
+        // Clicking conference swatch/name acts as a global toggle for all schools in that conference
         summaryDiv.innerHTML = `
-          <div><span class="conf-swatch" style="background:${color};"></span>${conf} (${schools.length})</div>
-          <span style="font-size:11px; color:#64748b;">▼</span>
+          <div class="conf-info-left" title="Click to toggle entire conference">
+            <span class="conf-swatch" style="background:${color};"></span>
+            <span><b>${conf}</b> (${schools.length})</span>
+          </div>
+          <span class="conf-toggle-arrow">▼ Expand</span>
         `;
 
         const listDiv = document.createElement('div');
         listDiv.className = 'school-list';
-        listDiv.style.display = 'none'; // Collapsed by default
+        listDiv.style.display = 'none';
 
-        summaryDiv.addEventListener('click', () => {
-          listDiv.style.display = listDiv.style.display === 'none' ? 'flex' : 'none';
+        // Global conference toggle handler
+        summaryDiv.querySelector('.conf-info-left').addEventListener('click', () => {
+          const checkboxes = listDiv.querySelectorAll('.school-checkbox');
+          const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+          checkboxes.forEach(cb => cb.checked = !allChecked);
+          updateMapFilters();
+        });
+
+        // Expand/Collapse arrow handler
+        summaryDiv.querySelector('.conf-toggle-arrow').addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isHidden = listDiv.style.display === 'none';
+          listDiv.style.display = isHidden ? 'flex' : 'none';
+          e.target.textContent = isHidden ? '▲ Collapse' : '▼ Expand';
         });
 
         schools.forEach(v => {
           const itemLabel = document.createElement('label');
           itemLabel.className = 'school-item';
+          itemLabel.id = `school-item-${v.college.replace(/\s+/g, '_')}`;
           itemLabel.innerHTML = `
             <input type="checkbox" class="school-checkbox" value="${v.college}" checked>
             <span class="school-name">${v.college}</span>
           `;
 
-          // Clicking school name pans map to stadium
           itemLabel.querySelector('.school-name').addEventListener('click', (e) => {
             e.preventDefault();
             map.flyTo(v.coords, 15, { duration: 0.8 });
             if (markersMap[v.college]) {
               markersMap[v.college].openPopup();
             }
+            showVenueDetails(v);
           });
 
-          // Toggling checkbox updates map
           itemLabel.querySelector('.school-checkbox').addEventListener('change', updateMapFilters);
           listDiv.appendChild(itemLabel);
         });
@@ -304,19 +508,11 @@
             radius: 6.5, fillColor: color, color: "#ffffff", weight: 1.5, opacity: 1, fillOpacity: 0.95
           }).addTo(venueLayer);
 
-          const capacityStr = v.capacity ? Number(v.capacity).toLocaleString() : 'N/A';
-          const wikiUrl = v.wikiUrl && v.wikiUrl.startsWith('http') ? v.wikiUrl : `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(v.venue + ' ' + v.college)}`;
+          marker.on('click', () => {
+            map.flyTo(v.coords, 15, { duration: 0.8 });
+            showVenueDetails(v);
+          });
 
-          const popupMarkup = `
-            <div class="popup-title">${v.college} ${v.mascot}</div>
-            <div class="popup-subtitle"><span class="conf-badge" style="background:${color};">${v.conference}</span>${v.venueCity}</div>
-            <div class="team-item"><b>Venue:</b> ${v.venue}</div>
-            <div class="meta-detail"><b>Capacity:</b> ${capacityStr}</div>
-            ${v.notes ? `<div class="meta-detail"><b>Notes:</b> ${v.notes}</div>` : ''}
-            <a href="${wikiUrl}" target="_blank" rel="noopener noreferrer" class="wiki-link">Wikipedia: ${v.venue} &rarr;</a>
-          `;
-
-          marker.bindPopup(L.popup({ autoPan: false }).setContent(popupMarkup));
           marker.bindTooltip(`<b>${v.college}</b>`, { direction: 'top', className: 'venue-tooltip', offset: [0, -8] });
           markersMap[v.college] = marker;
         }
@@ -380,7 +576,6 @@
       updateMapFilters();
     };
 
-    // Button event listeners
     document.getElementById('btn-all').addEventListener('click', () => {
       document.querySelectorAll('.school-checkbox').forEach(cb => cb.checked = true);
       updateMapFilters();
