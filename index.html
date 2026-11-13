@@ -398,7 +398,7 @@
 
     let venues = [];
     let markersMap = {}; 
-    let activeConference = null; // Track currently highlighted conference filter
+    let activeConference = null;
 
     function updateBasemapForZoom() {
       const currentZoom = map.getZoom();
@@ -515,7 +515,6 @@
           summaryDiv.addEventListener('click', () => {
             const isHidden = listDiv.style.display === 'none';
 
-            // Contract all other lists and reset arrows
             document.querySelectorAll('.school-list').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.conf-toggle-arrow').forEach(el => el.textContent = '▼');
 
@@ -579,7 +578,6 @@
         if (activeConference) {
           show = (v.conference === activeConference);
         } else {
-          // Check top filter buttons state
           const btnAll = document.getElementById('btn-select-all');
           const btnP4 = document.getElementById('btn-power-4');
           const btnG6 = document.getElementById('btn-group-6');
@@ -589,7 +587,7 @@
           else if (btnP4.classList.contains('active')) show = POWER_4.has(v.conference);
           else if (btnG6.classList.contains('active')) show = GROUP_OF_6.has(v.conference);
           else if (btnNone.classList.contains('active')) show = false;
-          else show = true; // default fallback
+          else show = true;
         }
 
         if (show) {
@@ -618,7 +616,7 @@
         document.getElementById(id).classList.remove('active');
       });
       document.getElementById(btnId).classList.add('active');
-      activeConference = null; // Clear individual conference isolation when top filter is clicked
+      activeConference = null;
       document.querySelectorAll('.school-list').forEach(el => el.style.display = 'none');
       document.querySelectorAll('.conf-toggle-arrow').forEach(el => el.textContent = '▼');
     }
