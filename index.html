@@ -169,6 +169,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      cursor: pointer;
       user-select: none;
     }
     .conf-summary:hover { background: #f1f5f9; }
@@ -177,7 +178,6 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      cursor: pointer;
       flex: 1;
     }
 
@@ -190,8 +190,6 @@
     }
 
     .conf-toggle-arrow {
-      cursor: pointer;
-      padding: 4px;
       color: #64748b;
       font-size: 10px;
     }
@@ -502,19 +500,28 @@
           const summaryDiv = document.createElement('div');
           summaryDiv.className = 'conf-summary';
           summaryDiv.innerHTML = `
-            <div class="conf-info-left" title="Click to highlight only this conference & reset view">
+            <div class="conf-info-left">
               <span class="conf-swatch" style="background:${color};"></span>
               <span><b>${conf}</b> (${schools.length})</span>
             </div>
-            <span class="conf-toggle-arrow">▼ Expand</span>
+            <span class="conf-toggle-arrow">▼</span>
           `;
 
           const listDiv = document.createElement('div');
           listDiv.className = 'school-list';
           listDiv.style.display = 'none';
 
-          // Clicking conference name highlights only this conference AND resets map view to default national view
-          summaryDiv.querySelector('.conf-info-left').addEventListener('click', () => {
+          // Clicking a conference highlights only its schools, contracts all other conference lists, expands this one, and resets map view
+          summaryDiv.addEventListener('click', () => {
+            // Contract all other lists and reset their arrows
+            document.querySelectorAll('.school-list').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.conf-toggle-arrow').forEach(el => el.textContent = '▼');
+
+            // Expand this list and update arrow
+            listDiv.style.display = 'flex';
+            summaryDiv.querySelector('.conf-toggle-arrow').textContent = '▲';
+
+            // Filter map to show only this conference
             document.querySelectorAll('.school-checkbox').forEach(cb => {
               const schoolObj = venues.find(s => s.college === cb.value);
               cb.checked = (schoolObj && schoolObj.conference === conf);
@@ -522,13 +529,6 @@
             updateMapFilters();
             updateTopButtonStates();
             map.setView([39.8283, -98.5795], 4);
-          });
-
-          summaryDiv.querySelector('.conf-toggle-arrow').addEventListener('click', (e) => {
-            e.stopPropagation();
-            const isHidden = listDiv.style.display === 'none';
-            listDiv.style.display = isHidden ? 'flex' : 'none';
-            e.target.textContent = isHidden ? '▲ Collapse' : '▼ Expand';
           });
 
           schools.forEach(v => {
