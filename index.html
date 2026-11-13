@@ -43,7 +43,7 @@
 
     #map { width: 100%; height: 100%; }
 
-    /* Right Info & Photo Explorer Panel */
+    /* Right Explorer Panel */
     #explorer-panel {
       width: 380px;
       background: #ffffff;
@@ -137,7 +137,18 @@
       padding: 10px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 10px;
+    }
+
+    .section-heading {
+      font-size: 11px;
+      font-weight: 800;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 6px 0 2px 4px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 2px;
     }
 
     /* Conference Accordion Card */
@@ -146,6 +157,7 @@
       border-radius: 8px;
       overflow: hidden;
       background: #fff;
+      margin-bottom: 6px;
     }
 
     .conf-summary {
@@ -263,6 +275,18 @@
     .team-title { font-size: 18px; font-weight: 800; color: #0f172a; margin: 0; }
     .team-subtitle { font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
 
+    .conf-badge-large {
+      display: inline-block;
+      font-weight: 800;
+      font-size: 10px;
+      color: #ffffff;
+      padding: 3px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -340,7 +364,6 @@
     <div id="explorer-panel">
       <div class="panel-header">
         <span>Venue & Team Explorer</span>
-        <span id="panel-conf-tag" style="font-size: 10px; font-weight: 700; background: rgba(255,255,255,0.15); padding: 2px 6px; border-radius: 4px;">FBS</span>
       </div>
       <div class="panel-body" id="panel-content">
         <div class="venue-photo-container">
@@ -389,24 +412,28 @@
     }
 
     async function fetchWikiImage(wikiUrl, venueName) {
-      let pageTitle = "";
+      // Clean up wiki url or fallback to venue name query
+      let titles = [];
       if (wikiUrl && wikiUrl.includes('/wiki/')) {
-        pageTitle = wikiUrl.split('/wiki/')[1];
-      } else {
-        pageTitle = encodeURIComponent(venueName);
+        let slug = wikiUrl.split('/wiki/')[1];
+        titles.push(slug);
       }
-      const apiUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&format=json&pithumbsize=500&titles=${pageTitle}&origin=*`;
-      try {
-        const response = await fetch(apiUrl);
-        const data = await response.json();
-        const pages = data.query.pages;
-        for (let id in pages) {
-          if (pages[id].thumbnail && pages[id].thumbnail.source) {
-            return pages[id].thumbnail.source;
+      titles.push(encodeURIComponent(venueName));
+
+      for (let t of titles) {
+        const apiUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&format=json&pithumbsize=600&titles=${t}&origin=*`;
+        try {
+          const response = await fetch(apiUrl);
+          const data = await response.json();
+          const pages = data.query.pages;
+          for (let id in pages) {
+            if (pages[id].thumbnail && pages[id].thumbnail.source) {
+              return pages[id].thumbnail.source;
+            }
           }
+        } catch (e) {
+          console.log("Wiki fetch error for title:", t);
         }
-      } catch (e) {
-        console.log("Could not fetch wiki image");
       }
       return null;
     }
@@ -416,15 +443,13 @@
       const capacityStr = v.capacity ? Number(v.capacity).toLocaleString() : 'N/A';
       const wikiUrl = v.wikiUrl && v.wikiUrl.startsWith('http') ? v.wikiUrl : `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(v.venue + ' ' + v.college)}`;
 
-      document.getElementById('panel-conf-tag').textContent = v.conference;
-      document.getElementById('panel-conf-tag').style.background = color;
-      
       const panelContent = document.getElementById('panel-content');
       panelContent.innerHTML = `
         <div class="venue-photo-container" id="photo-box">
           <div class="photo-placeholder">Loading Wikipedia photo...</div>
         </div>
         <div>
+          <span class="conf-badge-large" style="background:${color};">${v.conference}</span>
           <h2 class="team-title">${v.college} ${v.mascot}</h2>
           <div class="team-subtitle">${v.venueCity}</div>
         </div>
@@ -461,74 +486,92 @@
       const container = document.getElementById('sidebar-tree');
       container.innerHTML = '';
 
-      Object.keys(groupedData).sort().forEach(conf => {
-        const schools = groupedData[conf].sort((a, b) => a.college.localeCompare(b.college));
-        const color = CONFERENCE_COLORS[conf] || "#475569";
+      // Helper to render groups
+      function renderGroupList(title, confNames) {
+        const heading = document.createElement('div');
+        heading.className = 'section-heading';
+        heading.textContent = title;
+        container.appendChild(heading);
 
-        const groupDiv = document.createElement('div');
-        groupDiv.className = 'conf-group';
+        confNames.sort().forEach(conf => {
+          if (!groupedData[conf]) return;
+          const schools = groupedData[conf].sort((a, b) => a.college.localeCompare(b.college));
+          const color = CONFERENCE_COLORS[conf] || "#475569";
 
-        const summaryDiv = document.createElement('div');
-        summaryDiv.className = 'conf-summary';
-        
-        // Clicking conference header acts as a HIGHLIGHT filter (turns ON this conference, turns OFF all others)
-        summaryDiv.innerHTML = `
-          <div class="conf-info-left" title="Click to highlight only this conference">
-            <span class="conf-swatch" style="background:${color};"></span>
-            <span><b>${conf}</b> (${schools.length})</span>
-          </div>
-          <span class="conf-toggle-arrow">▼ Expand</span>
-        `;
+          const groupDiv = document.createElement('div');
+          groupDiv.className = 'conf-group';
 
-        const listDiv = document.createElement('div');
-        listDiv.className = 'school-list';
-        listDiv.style.display = 'none';
-
-        summaryDiv.querySelector('.conf-info-left').addEventListener('click', () => {
-          document.querySelectorAll('.school-checkbox').forEach(cb => {
-            const schoolObj = venues.find(s => s.college === cb.value);
-            cb.checked = (schoolObj && schoolObj.conference === conf);
-          });
-          updateMapFilters();
-          updateTopButtonStates();
-        });
-
-        summaryDiv.querySelector('.conf-toggle-arrow').addEventListener('click', (e) => {
-          e.stopPropagation();
-          const isHidden = listDiv.style.display === 'none';
-          listDiv.style.display = isHidden ? 'flex' : 'none';
-          e.target.textContent = isHidden ? '▲ Collapse' : '▼ Expand';
-        });
-
-        schools.forEach(v => {
-          const itemLabel = document.createElement('label');
-          itemLabel.className = 'school-item';
-          itemLabel.id = `school-item-${v.college.replace(/\s+/g, '_')}`;
-          itemLabel.innerHTML = `
-            <input type="checkbox" class="school-checkbox" value="${v.college}" checked>
-            <span class="school-name">${v.college}</span>
+          const summaryDiv = document.createElement('div');
+          summaryDiv.className = 'conf-summary';
+          summaryDiv.innerHTML = `
+            <div class="conf-info-left" title="Click to highlight only this conference">
+              <span class="conf-swatch" style="background:${color};"></span>
+              <span><b>${conf}</b> (${schools.length})</span>
+            </div>
+            <span class="conf-toggle-arrow">▼ Expand</span>
           `;
 
-          itemLabel.querySelector('.school-name').addEventListener('click', (e) => {
-            e.preventDefault();
-            map.flyTo(v.coords, 15, { duration: 0.8 });
-            if (markersMap[v.college]) {
-              markersMap[v.college].openPopup();
-            }
-            showVenueDetails(v);
-          });
+          const listDiv = document.createElement('div');
+          listDiv.className = 'school-list';
+          listDiv.style.display = 'none';
 
-          itemLabel.querySelector('.school-checkbox').addEventListener('change', () => {
+          summaryDiv.querySelector('.conf-info-left').addEventListener('click', () => {
+            document.querySelectorAll('.school-checkbox').forEach(cb => {
+              const schoolObj = venues.find(s => s.college === cb.value);
+              cb.checked = (schoolObj && schoolObj.conference === conf);
+            });
             updateMapFilters();
             updateTopButtonStates();
           });
-          listDiv.appendChild(itemLabel);
-        });
 
-        groupDiv.appendChild(summaryDiv);
-        groupDiv.appendChild(listDiv);
-        container.appendChild(groupDiv);
-      });
+          summaryDiv.querySelector('.conf-toggle-arrow').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isHidden = listDiv.style.display === 'none';
+            listDiv.style.display = isHidden ? 'flex' : 'none';
+            e.target.textContent = isHidden ? '▲ Collapse' : '▼ Expand';
+          });
+
+          schools.forEach(v => {
+            const itemLabel = document.createElement('label');
+            itemLabel.className = 'school-item';
+            itemLabel.id = `school-item-${v.college.replace(/\s+/g, '_')}`;
+            itemLabel.innerHTML = `
+              <input type="checkbox" class="school-checkbox" value="${v.college}" checked>
+              <span class="school-name">${v.college}</span>
+            `;
+
+            itemLabel.querySelector('.school-name').addEventListener('click', (e) => {
+              e.preventDefault();
+              map.flyTo(v.coords, 15, { duration: 0.8 });
+              if (markersMap[v.college]) {
+                markersMap[v.college].openPopup();
+              }
+              showVenueDetails(v);
+            });
+
+            itemLabel.querySelector('.school-checkbox').addEventListener('change', () => {
+              updateMapFilters();
+              updateTopButtonStates();
+            });
+            listDiv.appendChild(itemLabel);
+          });
+
+          groupDiv.appendChild(summaryDiv);
+          groupDiv.appendChild(listDiv);
+          container.appendChild(groupDiv);
+        });
+      }
+
+      const p4Confs = Object.keys(groupedData).filter(c => POWER_4.has(c));
+      const g6Confs = Object.keys(groupedData).filter(c => GROUP_OF_6.has(c));
+      const otherConfs = Object.keys(groupedData).filter(c => !POWER_4.has(c) && !GROUP_OF_6.has(c));
+
+      renderGroupList("Power 4", p4Confs);
+      renderGroupList("Group of 6", g6Confs);
+      if (otherConfs.length > 0) {
+        renderGroupList("Other / Independents", otherConfs);
+      }
+
       updateActiveCount();
     }
 
