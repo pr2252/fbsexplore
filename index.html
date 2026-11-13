@@ -412,7 +412,6 @@
     }
 
     async function fetchWikiImage(wikiUrl, venueName) {
-      // Clean up wiki url or fallback to venue name query
       let titles = [];
       if (wikiUrl && wikiUrl.includes('/wiki/')) {
         let slug = wikiUrl.split('/wiki/')[1];
@@ -486,7 +485,6 @@
       const container = document.getElementById('sidebar-tree');
       container.innerHTML = '';
 
-      // Helper to render groups
       function renderGroupList(title, confNames) {
         const heading = document.createElement('div');
         heading.className = 'section-heading';
@@ -504,7 +502,7 @@
           const summaryDiv = document.createElement('div');
           summaryDiv.className = 'conf-summary';
           summaryDiv.innerHTML = `
-            <div class="conf-info-left" title="Click to highlight only this conference">
+            <div class="conf-info-left" title="Click to highlight only this conference & reset view">
               <span class="conf-swatch" style="background:${color};"></span>
               <span><b>${conf}</b> (${schools.length})</span>
             </div>
@@ -515,6 +513,7 @@
           listDiv.className = 'school-list';
           listDiv.style.display = 'none';
 
+          // Clicking conference name highlights only this conference AND resets map view to default national view
           summaryDiv.querySelector('.conf-info-left').addEventListener('click', () => {
             document.querySelectorAll('.school-checkbox').forEach(cb => {
               const schoolObj = venues.find(s => s.college === cb.value);
@@ -522,6 +521,7 @@
             });
             updateMapFilters();
             updateTopButtonStates();
+            map.setView([39.8283, -98.5795], 4);
           });
 
           summaryDiv.querySelector('.conf-toggle-arrow').addEventListener('click', (e) => {
