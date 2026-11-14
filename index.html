@@ -461,13 +461,19 @@
     const osmStandard = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, noWrap: true });
     const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, noWrap: true });
 
-    const map = L.map('map', { zoomControl: true, minZoom: 3, layers: [osmStandard] }).setView([39.8283, -98.5795], 4);
+    // Responsive initial zoom: Zoom 3 for mobile (full US view), Zoom 4 for desktop
+    const initialZoom = window.innerWidth <= 1100 ? 3 : 4;
+    const map = L.map('map', { zoomControl: true, minZoom: 3, layers: [osmStandard] }).setView([39.8283, -98.5795], initialZoom);
     let activeBasemapLayer = osmStandard;
     const venueLayer = L.layerGroup().addTo(map);
 
     let venues = [];
     let markersMap = {}; 
     let activeConference = null;
+
+    function getNationalZoom() {
+      return window.innerWidth <= 1100 ? 3 : 4;
+    }
 
     function updateBasemapForZoom() {
       const currentZoom = map.getZoom();
@@ -497,6 +503,7 @@
         tabExplorer.classList.add('active');
         tabSidebar.classList.remove('active');
       }
+      setTimeout(() => { map.invalidateSize(); }, 100);
     }
 
     function resetRightPanel() {
@@ -569,13 +576,12 @@
         <button class="back-conf-btn" id="back-to-conf-btn">&larr; Back to ${v.conference} View</button>
       `;
 
-      // On mobile, auto-switch to the School Details tab when a school is selected!
       if (window.innerWidth <= 1100) {
         switchMobileTab('explorer');
       }
 
       document.getElementById('back-to-conf-btn').addEventListener('click', () => {
-        map.setView([39.8283, -98.5795], 4);
+        map.setView([39.8283, -98.5795], getNationalZoom());
         resetRightPanel();
         if (window.innerWidth <= 1100) {
           switchMobileTab('sidebar');
@@ -648,7 +654,7 @@
             });
 
             updateMapFilters();
-            map.setView([39.8283, -98.5795], 4);
+            map.setView([39.8283, -98.5795], getNationalZoom());
             resetRightPanel();
           });
 
@@ -740,7 +746,7 @@
       activeConference = null;
       document.querySelectorAll('.school-list').forEach(el => el.style.display = 'none');
       document.querySelectorAll('.conf-toggle-arrow').forEach(el => el.textContent = '▼');
-      map.setView([39.8283, -98.5795], 4);
+      map.setView([39.8283, -98.5795], getNationalZoom());
       resetRightPanel();
       if (window.innerWidth <= 1100) {
         switchMobileTab('sidebar');
@@ -813,7 +819,7 @@
       updateMapFilters();
     });
     document.getElementById('btn-reset-view').addEventListener('click', () => {
-      map.setView([39.8283, -98.5795], 4);
+      map.setView([39.8283, -98.5795], getNationalZoom());
       resetRightPanel();
       if (window.innerWidth <= 1100) {
         switchMobileTab('sidebar');
