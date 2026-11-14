@@ -65,7 +65,7 @@
     @media (max-width: 1100px) {
       #dashboard-wrapper { flex-direction: column; }
       
-      /* Map takes much less room on mobile now (38vh) */
+      /* Map takes 38% height on mobile */
       #map-container { 
         height: 38vh !important; 
         order: 1; 
@@ -100,7 +100,7 @@
         color: #38bdf8;
       }
 
-      /* Panels take remaining bottom space (~62vh) */
+      /* Panels take remaining bottom space */
       #sidebar, #explorer-panel {
         width: 100% !important;
         height: calc(62vh - 38px) !important;
@@ -148,7 +148,6 @@
     .filter-actions {
       display: flex;
       gap: 4px;
-      margin-bottom: 4px;
       flex-wrap: wrap;
     }
 
@@ -156,7 +155,7 @@
       background: #ffffff;
       border: 1.5px solid #cbd5e1;
       border-radius: 4px;
-      padding: 3px 6px;
+      padding: 4px 6px;
       font-size: 10px;
       font-weight: 700;
       cursor: pointer;
@@ -173,16 +172,6 @@
       font-weight: 700;
       box-shadow: 0 0 0 1.5px rgba(2, 132, 199, 0.4);
     }
-
-    .btn-reset {
-      background: #f1f5f9;
-      color: #334155;
-      border: 1px solid #cbd5e1;
-      width: 100%;
-      margin-top: 2px;
-      padding: 3px 6px;
-    }
-    .btn-reset:hover { background: #e2e8f0; color: #0f172a; }
 
     /* Fixed scrolling container for sidebar tree */
     .sidebar-content {
@@ -424,7 +413,6 @@
           <button class="btn-action" id="btn-group-6">Group of 6</button>
           <button class="btn-action" id="btn-select-none">None</button>
         </div>
-        <button class="btn-action btn-reset" id="btn-reset-view">Reset View</button>
       </div>
       <div class="sidebar-content" id="sidebar-tree"></div>
     </div>
@@ -830,13 +818,6 @@
     document.getElementById('btn-select-none').addEventListener('click', () => {
       setActiveFilterButton('btn-select-none');
       updateMapFilters();
-    });
-    document.getElementById('btn-reset-view').addEventListener('click', () => {
-      map.setView([39.8283, -98.5795], getNationalZoom());
-      resetRightPanel();
-      if (window.innerWidth <= 1100) {
-        switchMobileTab('sidebar');
-      }
     });
 
     const gvizUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?sheet=${encodeURIComponent(SHEET_NAME)}&tqx=responseHandler:handleGvizResponse`;
