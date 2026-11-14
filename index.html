@@ -57,11 +57,6 @@
       flex-shrink: 0;
     }
 
-    /* Mobile Tab Bar (Hidden on Desktop) */
-    .mobile-tab-bar {
-      display: none;
-    }
-
     @media (max-width: 1100px) {
       #dashboard-wrapper { flex-direction: column; }
       
@@ -72,43 +67,26 @@
         width: 100%;
       }
 
-      /* Streamlined Mobile Tab Bar */
-      .mobile-tab-bar {
-        display: flex;
-        background: #0f172a;
-        color: #fff;
-        height: 38px;
-        flex-shrink: 0;
+      /* Panels take remaining bottom space stacked without tabs */
+      #sidebar {
+        width: 100% !important;
+        height: 62vh !important;
         order: 2;
-        z-index: 1001;
-        border-top: 1px solid #334155;
-      }
-      .mobile-tab {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 11px;
-        font-weight: 700;
-        cursor: pointer;
-        border-bottom: 3px solid transparent;
-        transition: all 0.15s ease;
-      }
-      .mobile-tab.active {
-        background: #1e293b;
-        border-bottom-color: #0284c7;
-        color: #38bdf8;
+        display: flex !important;
       }
 
-      /* Panels take remaining bottom space */
-      #sidebar, #explorer-panel {
+      #explorer-panel {
         width: 100% !important;
-        height: calc(62vh - 38px) !important;
-        order: 3;
-        display: none;
+        height: 62vh !important;
+        order: 2;
+        display: none !important;
       }
-      #sidebar.mobile-active, #explorer-panel.mobile-active {
+
+      #explorer-panel.mobile-active {
         display: flex !important;
+      }
+      #sidebar.mobile-hidden {
+        display: none !important;
       }
 
       /* Hide redundant thick sidebar header on mobile */
@@ -396,10 +374,10 @@
 <body>
 
   <div id="dashboard-wrapper">
-    <!-- Left Sidebar: Conferences & Schools -->
-    <div id="sidebar" class="mobile-active">
+    <!-- Left Sidebar: Conferences -->
+    <div id="sidebar">
       <div class="sidebar-header">
-        <span>Conferences & Schools</span>
+        <span>Conferences</span>
         <span id="active-count" style="font-size: 11px; font-weight: 600; opacity: 0.8;">Loading...</span>
       </div>
       <div class="filter-section">
@@ -422,16 +400,10 @@
       <div id="map"></div>
     </div>
 
-    <!-- Mobile Tab Navigation (Only visible on mobile) -->
-    <div class="mobile-tab-bar">
-      <div class="mobile-tab active" id="tab-sidebar" onclick="switchMobileTab('sidebar')">Conferences</div>
-      <div class="mobile-tab" id="tab-explorer" onclick="switchMobileTab('explorer')">School Details</div>
-    </div>
-
-    <!-- Right Explorer Detail Panel -->
+    <!-- Right Explorer Detail Panel: School Details -->
     <div id="explorer-panel">
       <div class="panel-header">
-        <span>Venue & Team Explorer</span>
+        <span>School Details</span>
       </div>
       <div class="panel-body" id="panel-content">
         <div class="venue-photo-container">
@@ -485,22 +457,15 @@
       }
     }
 
-    function switchMobileTab(tabName) {
+    function showMobilePanel(panelType) {
       const sidebar = document.getElementById('sidebar');
       const explorer = document.getElementById('explorer-panel');
-      const tabSidebar = document.getElementById('tab-sidebar');
-      const tabExplorer = document.getElementById('tab-explorer');
-
-      if (tabName === 'sidebar') {
-        sidebar.classList.add('mobile-active');
-        explorer.classList.remove('mobile-active');
-        tabSidebar.classList.add('active');
-        tabExplorer.classList.remove('active');
-      } else {
+      if (panelType === 'explorer') {
         explorer.classList.add('mobile-active');
-        sidebar.classList.remove('mobile-active');
-        tabExplorer.classList.add('active');
-        tabSidebar.classList.remove('active');
+        sidebar.classList.add('mobile-hidden');
+      } else {
+        explorer.classList.remove('mobile-active');
+        sidebar.classList.remove('mobile-hidden');
       }
       setTimeout(() => { map.invalidateSize(); }, 100);
     }
@@ -517,6 +482,9 @@
         </div>
       `;
       document.querySelectorAll('.school-item').forEach(el => el.classList.remove('selected-active'));
+      if (window.innerWidth <= 1100) {
+        showMobilePanel('sidebar');
+      }
     }
 
     async function fetchWikiImage(wikiUrl, venueName) {
@@ -572,19 +540,16 @@
         </div>
         ${v.notes ? `<div class="notes-box"><b>Notes:</b> ${v.notes}</div>` : ''}
         <a href="${wikiUrl}" target="_blank" rel="noopener noreferrer" class="wiki-btn">View on Wikipedia &rarr;</a>
-        <button class="back-conf-btn" id="back-to-conf-btn">&larr; Back to ${v.conference} View</button>
+        <button class="back-conf-btn" id="back-to-conf-btn">&larr; Back to Conferences</button>
       `;
 
       if (window.innerWidth <= 1100) {
-        switchMobileTab('explorer');
+        showMobilePanel('explorer');
       }
 
       document.getElementById('back-to-conf-btn').addEventListener('click', () => {
         map.setView([39.8283, -98.5795], getNationalZoom());
         resetRightPanel();
-        if (window.innerWidth <= 1100) {
-          switchMobileTab('sidebar');
-        }
       });
 
       document.querySelectorAll('.school-item').forEach(el => el.classList.remove('selected-active'));
@@ -749,9 +714,6 @@
       document.querySelectorAll('.conf-toggle-arrow').forEach(el => el.textContent = '▼');
       map.setView([39.8283, -98.5795], getNationalZoom());
       resetRightPanel();
-      if (window.innerWidth <= 1100) {
-        switchMobileTab('sidebar');
-      }
     }
 
     window.handleGvizResponse = function(response) {
