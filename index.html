@@ -278,15 +278,12 @@
       font-weight: 800;
       font-size: 10px;
       color: #ffffff;
-      padding: 4px 10px;
+      padding: 3px 8px;
       border-radius: 4px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-bottom: 4px;
-      cursor: pointer;
-      transition: opacity 0.15s, box-shadow 0.15s;
     }
-    .conf-badge-large:hover { opacity: 0.9; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
 
     .info-grid {
       display: grid;
@@ -327,9 +324,26 @@
       font-weight: 700;
       font-size: 12px;
       transition: background 0.15s ease;
-      margin-top: auto;
     }
     .wiki-btn:hover { background: #0369a1; }
+
+    .back-conf-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: #f1f5f9;
+      color: #334155;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      margin-top: auto;
+    }
+    .back-conf-btn:hover { background: #e2e8f0; color: #0f172a; }
 
     .venue-tooltip { background: rgba(255, 255, 255, 0.95); border: 1px solid #cbd5e1; border-radius: 4px; color: #0f172a; font-size: 11px; font-weight: 600; padding: 3px 7px; }
   </style>
@@ -361,7 +375,7 @@
       <div id="map"></div>
     </div>
 
-    <!-- Right Explorer Panel -->
+    <!-- Right Explorer Detail Panel -->
     <div id="explorer-panel">
       <div class="panel-header">
         <span>Venue & Team Explorer</span>
@@ -413,13 +427,18 @@
       }
     }
 
-    function isolateConference(confName) {
-      activeConference = confName;
-      ['btn-select-all', 'btn-power-4', 'btn-group-6', 'btn-select-none'].forEach(id => {
-        document.getElementById(id).classList.remove('active');
-      });
-      updateMapFilters();
-      map.setView([39.8283, -98.5795], 4);
+    function resetRightPanel() {
+      const panelContent = document.getElementById('panel-content');
+      panelContent.innerHTML = `
+        <div class="venue-photo-container">
+          <div class="photo-placeholder">Click any stadium marker on the map or school name in the sidebar to inspect details and Wikipedia photos.</div>
+        </div>
+        <div>
+          <h2 class="team-title">Select a School</h2>
+          <div class="team-subtitle">Interactive Dashboard</div>
+        </div>
+      `;
+      document.querySelectorAll('.school-item').forEach(el => el.classList.remove('selected-active'));
     }
 
     async function fetchWikiImage(wikiUrl, venueName) {
@@ -459,7 +478,7 @@
           <div class="photo-placeholder">Loading Wikipedia photo...</div>
         </div>
         <div>
-          <span class="conf-badge-large" id="badge-${v.conference.replace(/\s+/g, '_')}" style="background:${color};" title="Click to return to ${v.conference} conference view">&larr; Back to ${v.conference} View</span>
+          <span class="conf-badge-large" style="background:${color};">${v.conference}</span>
           <h2 class="team-title">${v.college} ${v.mascot}</h2>
           <div class="team-subtitle">${v.venueCity}</div>
         </div>
@@ -475,23 +494,13 @@
         </div>
         ${v.notes ? `<div class="notes-box"><b>Notes:</b> ${v.notes}</div>` : ''}
         <a href="${wikiUrl}" target="_blank" rel="noopener noreferrer" class="wiki-btn">View on Wikipedia &rarr;</a>
+        <button class="back-conf-btn" id="back-to-conf-btn">&larr; Back to ${v.conference} View</button>
       `;
 
-      // Clicking the return badge in the right pane instantly zooms out to national view while keeping that conference selected!
-      document.getElementById(`badge-${v.conference.replace(/\s+/g, '_')}`).addEventListener('click', () => {
-        isolateConference(v.conference);
-        // Ensure its sidebar list is expanded
-        const groupElements = document.querySelectorAll('.conf-group');
-        groupElements.forEach(g => {
-          const titleSpan = g.querySelector('.conf-info-left span:nth-child(2)');
-          if (titleSpan && titleSpan.textContent.includes(v.conference)) {
-            g.querySelector('.school-list').style.display = 'flex';
-            g.querySelector('.conf-toggle-arrow').textContent = '▲';
-          } else {
-            g.querySelector('.school-list').style.display = 'none';
-            g.querySelector('.conf-toggle-arrow').textContent = '▼';
-          }
-        });
+      // Back to Conference button at the bottom: resets map view and blanks the right pane
+      document.getElementById('back-to-conf-btn').addEventListener('click', () => {
+        map.setView([39.8283, -98.5795], 4);
+        resetRightPanel();
       });
 
       document.querySelectorAll('.school-item').forEach(el => el.classList.remove('selected-active'));
@@ -542,27 +551,26 @@
           listDiv.style.display = 'none';
 
           summaryDiv.addEventListener('click', () => {
-            const isCurrentlyExpanded = (listDiv.style.display === 'flex');
+            const isHidden = listDiv.style.display === 'none';
 
-            if (isCurrentlyExpanded) {
-              // If already expanded and active, clicking it again resets/toggles closed if desired, or keeps active.
-              // User preference: clicking conference name should expand and filter. If already active, toggle closed or keep open.
-              // Let's toggle closed if clicked when active, or keep it smooth:
-              listDiv.style.display = 'none';
-              summaryDiv.querySelector('.conf-toggle-arrow').textContent = '▼';
-              activeConference = null;
-              updateMapFilters();
-              map.setView([39.8283, -98.5795], 4);
-            } else {
-              // Contract all other lists
-              document.querySelectorAll('.school-list').forEach(el => el.style.display = 'none');
-              document.querySelectorAll('.conf-toggle-arrow').forEach(el => el.textContent = '▼');
+            document.querySelectorAll('.school-list').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.conf-toggle-arrow').forEach(el => el.textContent = '▼');
 
-              // Expand this one
+            if (isHidden) {
               listDiv.style.display = 'flex';
               summaryDiv.querySelector('.conf-toggle-arrow').textContent = '▲';
-              isolateConference(conf);
+              activeConference = conf;
+            } else {
+              activeConference = null;
             }
+
+            ['btn-select-all', 'btn-power-4', 'btn-group-6', 'btn-select-none'].forEach(id => {
+              document.getElementById(id).classList.remove('active');
+            });
+
+            updateMapFilters();
+            map.setView([39.8283, -98.5795], 4);
+            resetRightPanel();
           });
 
           schools.forEach(v => {
@@ -654,6 +662,7 @@
       document.querySelectorAll('.school-list').forEach(el => el.style.display = 'none');
       document.querySelectorAll('.conf-toggle-arrow').forEach(el => el.textContent = '▼');
       map.setView([39.8283, -98.5795], 4);
+      resetRightPanel();
     }
 
     window.handleGvizResponse = function(response) {
@@ -723,6 +732,7 @@
     });
     document.getElementById('btn-reset-view').addEventListener('click', () => {
       map.setView([39.8283, -98.5795], 4);
+      resetRightPanel();
     });
 
     const gvizUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?sheet=${encodeURIComponent(SHEET_NAME)}&tqx=responseHandler:handleGvizResponse`;
