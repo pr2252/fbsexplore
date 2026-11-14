@@ -283,7 +283,10 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-bottom: 4px;
+      cursor: pointer;
+      transition: opacity 0.15s;
     }
+    .conf-badge-large:hover { opacity: 0.85; }
 
     .info-grid {
       display: grid;
@@ -410,6 +413,15 @@
       }
     }
 
+    function isolateConference(confName) {
+      activeConference = confName;
+      ['btn-select-all', 'btn-power-4', 'btn-group-6', 'btn-select-none'].forEach(id => {
+        document.getElementById(id).classList.remove('active');
+      });
+      updateMapFilters();
+      map.setView([39.8283, -98.5795], 4);
+    }
+
     async function fetchWikiImage(wikiUrl, venueName) {
       let titles = [];
       if (wikiUrl && wikiUrl.includes('/wiki/')) {
@@ -447,7 +459,7 @@
           <div class="photo-placeholder">Loading Wikipedia photo...</div>
         </div>
         <div>
-          <span class="conf-badge-large" style="background:${color};">${v.conference}</span>
+          <span class="conf-badge-large" id="badge-${v.conference.replace(/\s+/g, '_')}" style="background:${color};" title="Click to zoom out to conference view">${v.conference} (Back to View)</span>
           <h2 class="team-title">${v.college} ${v.mascot}</h2>
           <div class="team-subtitle">${v.venueCity}</div>
         </div>
@@ -464,6 +476,11 @@
         ${v.notes ? `<div class="notes-box"><b>Notes:</b> ${v.notes}</div>` : ''}
         <a href="${wikiUrl}" target="_blank" rel="noopener noreferrer" class="wiki-btn">View on Wikipedia &rarr;</a>
       `;
+
+      // Clicking the conference badge in the detail panel instantly zooms out to national view while keeping that conference selected!
+      document.getElementById(`badge-${v.conference.replace(/\s+/g, '_')}`).addEventListener('click', () => {
+        isolateConference(v.conference);
+      });
 
       document.querySelectorAll('.school-item').forEach(el => el.classList.remove('selected-active'));
       const activeEl = document.getElementById(`school-item-${v.college.replace(/\s+/g, '_')}`);
@@ -521,18 +538,12 @@
             if (isHidden) {
               listDiv.style.display = 'flex';
               summaryDiv.querySelector('.conf-toggle-arrow').textContent = '▲';
-              activeConference = conf;
+              isolateConference(conf);
             } else {
               activeConference = null;
+              updateMapFilters();
+              map.setView([39.8283, -98.5795], 4);
             }
-
-            // Clear top filter buttons active state when clicking a conference
-            ['btn-select-all', 'btn-power-4', 'btn-group-6', 'btn-select-none'].forEach(id => {
-              document.getElementById(id).classList.remove('active');
-            });
-
-            updateMapFilters();
-            map.setView([39.8283, -98.5795], 4);
           });
 
           schools.forEach(v => {
@@ -623,7 +634,6 @@
       activeConference = null;
       document.querySelectorAll('.school-list').forEach(el => el.style.display = 'none');
       document.querySelectorAll('.conf-toggle-arrow').forEach(el => el.textContent = '▼');
-      
       map.setView([39.8283, -98.5795], 4);
     }
 
