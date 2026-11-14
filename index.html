@@ -322,24 +322,20 @@
     .wiki-btn:hover { background: #0369a1; }
 
     .back-conf-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      background: #0284c7;
+      background: #334155;
       color: #ffffff;
-      border: 1.5px solid #0369a1;
-      border-radius: 6px;
-      padding: 8px 14px;
-      font-weight: 800;
-      font-size: 12px;
+      border: 1.5px solid #475569;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 10px;
+      font-weight: 700;
       cursor: pointer;
       transition: all 0.15s ease;
+      text-align: center;
       width: 100%;
       box-sizing: border-box;
-      box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
     }
-    .back-conf-btn:hover { background: #0369a1; }
+    .back-conf-btn:hover { background: #475569; color: #ffffff; }
 
     .venue-tooltip { background: rgba(255, 255, 255, 0.95); border: 1px solid #cbd5e1; border-radius: 4px; color: #0f172a; font-size: 11px; font-weight: 600; padding: 3px 7px; }
   </style>
@@ -369,11 +365,13 @@
       <div id="map"></div>
     </div>
 
-    <!-- Right Explorer Detail Panel: School Details -->
+    <!-- Right Explorer Panel: School Details -->
     <div id="explorer-panel">
       <div class="nav-bar-banner">
-        <span>School Details</span>
-        <button class="back-conf-btn" id="back-to-conf-btn" style="margin-top: 4px;">&larr; Back to Conferences</button>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span>School Details</span>
+        </div>
+        <button class="back-conf-btn" id="back-to-conf-btn">&larr; Back to Conferences</button>
       </div>
       <div class="panel-body" id="panel-content">
         <div class="venue-photo-container">
