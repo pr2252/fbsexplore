@@ -348,6 +348,7 @@
       font-weight: 700;
       font-size: 11px;
       transition: background 0.15s ease;
+      margin-top: auto;
     }
     .wiki-btn:hover { background: #0369a1; }
 
@@ -365,6 +366,9 @@
       font-size: 11px;
       cursor: pointer;
       transition: all 0.15s ease;
+      width: 100%;
+      margin-bottom: 2px;
+      box-sizing: border-box;
     }
     .back-conf-btn:hover { background: #e2e8f0; color: #0f172a; }
 
@@ -520,6 +524,7 @@
 
       const panelContent = document.getElementById('panel-content');
       panelContent.innerHTML = `
+        <button class="back-conf-btn" id="back-to-conf-btn">&larr; Back to Conferences</button>
         <div class="venue-photo-container" id="photo-box">
           <div class="photo-placeholder">Loading Wikipedia photo...</div>
         </div>
@@ -540,7 +545,6 @@
         </div>
         ${v.notes ? `<div class="notes-box"><b>Notes:</b> ${v.notes}</div>` : ''}
         <a href="${wikiUrl}" target="_blank" rel="noopener noreferrer" class="wiki-btn">View on Wikipedia &rarr;</a>
-        <button class="back-conf-btn" id="back-to-conf-btn">&larr; Back to Conferences</button>
       `;
 
       if (window.innerWidth <= 1100) {
