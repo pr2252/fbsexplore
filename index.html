@@ -278,15 +278,15 @@
       font-weight: 800;
       font-size: 10px;
       color: #ffffff;
-      padding: 3px 8px;
+      padding: 4px 10px;
       border-radius: 4px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-bottom: 4px;
       cursor: pointer;
-      transition: opacity 0.15s;
+      transition: opacity 0.15s, box-shadow 0.15s;
     }
-    .conf-badge-large:hover { opacity: 0.85; }
+    .conf-badge-large:hover { opacity: 0.9; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
 
     .info-grid {
       display: grid;
@@ -459,7 +459,7 @@
           <div class="photo-placeholder">Loading Wikipedia photo...</div>
         </div>
         <div>
-          <span class="conf-badge-large" id="badge-${v.conference.replace(/\s+/g, '_')}" style="background:${color};" title="Click to zoom out to conference view">${v.conference} (Back to View)</span>
+          <span class="conf-badge-large" id="badge-${v.conference.replace(/\s+/g, '_')}" style="background:${color};" title="Click to return to ${v.conference} conference view">&larr; Back to ${v.conference} View</span>
           <h2 class="team-title">${v.college} ${v.mascot}</h2>
           <div class="team-subtitle">${v.venueCity}</div>
         </div>
@@ -477,9 +477,21 @@
         <a href="${wikiUrl}" target="_blank" rel="noopener noreferrer" class="wiki-btn">View on Wikipedia &rarr;</a>
       `;
 
-      // Clicking the conference badge in the detail panel instantly zooms out to national view while keeping that conference selected!
+      // Clicking the return badge in the right pane instantly zooms out to national view while keeping that conference selected!
       document.getElementById(`badge-${v.conference.replace(/\s+/g, '_')}`).addEventListener('click', () => {
         isolateConference(v.conference);
+        // Ensure its sidebar list is expanded
+        const groupElements = document.querySelectorAll('.conf-group');
+        groupElements.forEach(g => {
+          const titleSpan = g.querySelector('.conf-info-left span:nth-child(2)');
+          if (titleSpan && titleSpan.textContent.includes(v.conference)) {
+            g.querySelector('.school-list').style.display = 'flex';
+            g.querySelector('.conf-toggle-arrow').textContent = '▲';
+          } else {
+            g.querySelector('.school-list').style.display = 'none';
+            g.querySelector('.conf-toggle-arrow').textContent = '▼';
+          }
+        });
       });
 
       document.querySelectorAll('.school-item').forEach(el => el.classList.remove('selected-active'));
@@ -530,19 +542,26 @@
           listDiv.style.display = 'none';
 
           summaryDiv.addEventListener('click', () => {
-            const isHidden = listDiv.style.display === 'none';
+            const isCurrentlyExpanded = (listDiv.style.display === 'flex');
 
-            document.querySelectorAll('.school-list').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('.conf-toggle-arrow').forEach(el => el.textContent = '▼');
-
-            if (isHidden) {
-              listDiv.style.display = 'flex';
-              summaryDiv.querySelector('.conf-toggle-arrow').textContent = '▲';
-              isolateConference(conf);
-            } else {
+            if (isCurrentlyExpanded) {
+              // If already expanded and active, clicking it again resets/toggles closed if desired, or keeps active.
+              // User preference: clicking conference name should expand and filter. If already active, toggle closed or keep open.
+              // Let's toggle closed if clicked when active, or keep it smooth:
+              listDiv.style.display = 'none';
+              summaryDiv.querySelector('.conf-toggle-arrow').textContent = '▼';
               activeConference = null;
               updateMapFilters();
               map.setView([39.8283, -98.5795], 4);
+            } else {
+              // Contract all other lists
+              document.querySelectorAll('.school-list').forEach(el => el.style.display = 'none');
+              document.querySelectorAll('.conf-toggle-arrow').forEach(el => el.textContent = '▼');
+
+              // Expand this one
+              listDiv.style.display = 'flex';
+              summaryDiv.querySelector('.conf-toggle-arrow').textContent = '▲';
+              isolateConference(conf);
             }
           });
 
