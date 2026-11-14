@@ -88,23 +88,25 @@
       #sidebar.mobile-hidden {
         display: none !important;
       }
-
-      /* Hide redundant thick sidebar header on mobile */
-      .sidebar-header {
-        display: none !important;
-      }
     }
 
-    .sidebar-header {
-      background: #0f172a;
-      color: #fff;
+    /* Removed frame headers entirely across both desktop & mobile */
+    .sidebar-header, .panel-header {
+      display: none !important;
+    }
+
+    /* Prominent Navigation Bars matching old heading style */
+    .nav-bar-banner {
+      background: #1e293b;
+      color: #ffffff;
       padding: 12px 16px;
       font-size: 13px;
       font-weight: 800;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
+      gap: 8px;
       flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
 
     .filter-section {
@@ -242,22 +244,6 @@
     .school-name:hover { color: #0284c7; text-decoration: underline; }
     .school-item.selected-active .school-name { color: #0284c7; font-weight: 800; }
 
-    /* Right Explorer Panel Styles */
-    .panel-header {
-      background: #1e293b;
-      color: #fff;
-      padding: 12px 16px;
-      font-size: 13px;
-      font-weight: 800;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0;
-    }
-    @media (max-width: 1100px) {
-      .panel-header { display: none !important; }
-    }
-
     .panel-body {
       padding: 12px;
       flex: 1;
@@ -356,20 +342,20 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
-      background: #f1f5f9;
-      color: #334155;
-      border: 1.5px solid #cbd5e1;
+      background: #0284c7;
+      color: #ffffff;
+      border: 1.5px solid #0369a1;
       border-radius: 6px;
-      padding: 6px 12px;
-      font-weight: 700;
-      font-size: 11px;
+      padding: 8px 14px;
+      font-weight: 800;
+      font-size: 12px;
       cursor: pointer;
       transition: all 0.15s ease;
       width: 100%;
-      margin-bottom: 2px;
       box-sizing: border-box;
+      box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
     }
-    .back-conf-btn:hover { background: #e2e8f0; color: #0f172a; }
+    .back-conf-btn:hover { background: #0369a1; }
 
     .venue-tooltip { background: rgba(255, 255, 255, 0.95); border: 1px solid #cbd5e1; border-radius: 4px; color: #0f172a; font-size: 11px; font-weight: 600; padding: 3px 7px; }
   </style>
@@ -379,20 +365,16 @@
   <div id="dashboard-wrapper">
     <!-- Left Sidebar: Conferences -->
     <div id="sidebar">
-      <div class="sidebar-header">
-        <span>Conferences</span>
-        <span id="active-count" style="font-size: 11px; font-weight: 600; opacity: 0.8;">Loading...</span>
-      </div>
-      <div class="filter-section">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <div class="filter-title" style="margin-bottom:0;">Filter Conferences</div>
-          <span id="mobile-active-count" style="font-size: 10px; font-weight: 700; color: #64748b; display:none;">Loading...</span>
+      <div class="nav-bar-banner">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Conferences</span>
+          <span id="active-count" style="font-size: 11px; font-weight: 600; opacity: 0.9;">Loading...</span>
         </div>
-        <div class="filter-actions">
-          <button class="btn-action active" id="btn-select-all">All</button>
-          <button class="btn-action" id="btn-power-4">Power 4</button>
-          <button class="btn-action" id="btn-group-6">Group of 6</button>
-          <button class="btn-action" id="btn-select-none">None</button>
+        <div style="display: flex; gap: 4px; width: 100%;">
+          <button class="btn-action active" id="btn-select-all" style="background:#334155; border-color:#475569; color:#fff;">All</button>
+          <button class="btn-action" id="btn-power-4" style="background:#334155; border-color:#475569; color:#fff;">Power 4</button>
+          <button class="btn-action" id="btn-group-6" style="background:#334155; border-color:#475569; color:#fff;">Group of 6</button>
+          <button class="btn-action" id="btn-select-none" style="background:#334155; border-color:#475569; color:#fff;">None</button>
         </div>
       </div>
       <div class="sidebar-content" id="sidebar-tree"></div>
@@ -405,10 +387,11 @@
 
     <!-- Right Explorer Detail Panel: School Details -->
     <div id="explorer-panel">
-      <div class="panel-header">
+      <div class="nav-bar-banner">
         <span>School Details</span>
       </div>
       <div class="panel-body" id="panel-content">
+        <button class="back-conf-btn" id="back-to-conf-btn">&larr; Back to Conferences</button>
         <div class="venue-photo-container">
           <div class="photo-placeholder">Click any stadium marker on the map or school name in the sidebar to inspect details and Wikipedia photos.</div>
         </div>
@@ -476,6 +459,7 @@
     function resetRightPanel() {
       const panelContent = document.getElementById('panel-content');
       panelContent.innerHTML = `
+        <button class="back-conf-btn" id="back-to-conf-btn">&larr; Back to Conferences</button>
         <div class="venue-photo-container">
           <div class="photo-placeholder">Click any stadium marker on the map or school name in the sidebar to inspect details and Wikipedia photos.</div>
         </div>
@@ -484,6 +468,10 @@
           <div class="team-subtitle">Interactive Dashboard</div>
         </div>
       `;
+      document.getElementById('back-to-conf-btn').addEventListener('click', () => {
+        map.setView([39.8283, -98.5795], getNationalZoom());
+        resetRightPanel();
+      });
       document.querySelectorAll('.school-item').forEach(el => el.classList.remove('selected-active'));
       if (window.innerWidth <= 1100) {
         showMobilePanel('sidebar');
@@ -617,7 +605,8 @@
             }
 
             ['btn-select-all', 'btn-power-4', 'btn-group-6', 'btn-select-none'].forEach(id => {
-              document.getElementById(id).classList.remove('active');
+              const btn = document.getElementById(id);
+              if (btn) btn.style.background = '#334155';
             });
 
             updateMapFilters();
@@ -702,16 +691,21 @@
       });
 
       document.getElementById('active-count').textContent = `${visibleCount} of ${venues.length} shown`;
-      const mobileCountEl = document.getElementById('mobile-active-count');
-      if (mobileCountEl) mobileCountEl.textContent = `${visibleCount} / ${venues.length}`;
       updateBasemapForZoom();
     }
 
     function setActiveFilterButton(btnId) {
       ['btn-select-all', 'btn-power-4', 'btn-group-6', 'btn-select-none'].forEach(id => {
-        document.getElementById(id).classList.remove('active');
+        const btn = document.getElementById(id);
+        btn.classList.remove('active');
+        btn.style.background = '#334155';
+        btn.style.borderColor = '#475569';
       });
-      document.getElementById(btnId).classList.add('active');
+      const activeBtn = document.getElementById(btnId);
+      activeBtn.classList.add('active');
+      activeBtn.style.background = '#0284c7';
+      activeBtn.style.borderColor = '#0369a1';
+
       activeConference = null;
       document.querySelectorAll('.school-list').forEach(el => el.style.display = 'none');
       document.querySelectorAll('.conf-toggle-arrow').forEach(el => el.textContent = '▼');
@@ -783,6 +777,17 @@
     document.getElementById('btn-select-none').addEventListener('click', () => {
       setActiveFilterButton('btn-select-none');
       updateMapFilters();
+    });
+
+    // Initialize initial active button state color
+    const initialActiveBtn = document.getElementById('btn-select-all');
+    initialActiveBtn.style.background = '#0284c7';
+    initialActiveBtn.style.borderColor = '#0369a1';
+
+    // Back to Conferences initial listener
+    document.getElementById('back-to-conf-btn').addEventListener('click', () => {
+      map.setView([39.8283, -98.5795], getNationalZoom());
+      resetRightPanel();
     });
 
     const gvizUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?sheet=${encodeURIComponent(SHEET_NAME)}&tqx=responseHandler:handleGvizResponse`;
